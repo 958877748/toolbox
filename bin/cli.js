@@ -43,19 +43,28 @@ async function cmdList() {
   const providers = (await listProviders()).map((f) => f.slice(0, -5))
   const scripts = await listScripts()
   console.log(`Built-in providers (${providers.length}):`)
-  for (const id of providers) console.log(`  ${id}`)
+  for (const id of providers) console.log(`  [p] ${id}`)
   console.log(`\nScripts (${scripts.length}):`)
-  for (const name of scripts) console.log(`  ${name}`)
-  console.log("\nRun: oct               interactive provider install")
-  console.log("      oct <script>     run a script")
+  for (const name of scripts) console.log(`  [s] ${name}`)
+  console.log("\nRun: oct")
 }
 
-function askChoice(choices) {
+async function allItems() {
+  const providers = (await listProviders()).map((f) => f.slice(0, -5))
+  const scripts = await listScripts()
+  return [
+    ...providers.map((id) => ({ type: "provider", id })),
+    ...scripts.map((name) => ({ type: "script", id: name })),
+  ]
+}
+
+function askChoice(items) {
   return new Promise((resolve) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout })
-    console.log("Built-in providers:")
-    for (let i = 0; i < choices.length; i++) {
-      console.log(`  ${i + 1}) ${choices[i]}`)
+    console.log("Available:")
+    for (let i = 0; i < items.length; i++) {
+      const tag = items[i].type === "provider" ? "p" : "s"
+      console.log(`  ${i + 1}) [${tag}] ${items[i].id}`)
     }
     rl.question(
       "Select (numbers, e.g. 1,2 | a = all | q = quit): ",
@@ -67,15 +76,14 @@ function askChoice(choices) {
   })
 }
 
-async function selectProviders(available) {
-  const ids = available.map((f) => f.slice(0, -5))
-  const answer = await askChoice(ids)
+async function selectItems(items) {
+  const answer = await askChoice(items)
   if (/^q$/i.test(answer)) return null
-  if (/^a$/i.test(answer)) return ids
+  if (/^a$/i.test(answer)) return items
   const selected = new Set()
   for (const part of answer.split(/[,\s]+/)) {
     const n = parseInt(part, 10)
-    if (n >= 1 && n <= ids.length) selected.add(ids[n - 1])
+    if (n >= 1 && n <= items.length) selected.add(items[n - 1])
   }
   return [...selected]
 }
@@ -144,12 +152,17 @@ const args = rest.filter((a) => !a.startsWith("--"))
 if (command === "list") {
   await cmdList()
 } else if (!command) {
-  const available = await listProviders()
-  const selected = await selectProviders(available)
+  const items = await allItems()
+  const selected = await selectItems(items)
   if (!selected || selected.length === 0) {
     console.log("Nothing selected.")
   } else {
-    await cmdInstall(selected, force)
+    const providers = selected
+      .filter((i) => i.type === "provider")
+      .map((i) => i.id)
+    const scripts = selected.filter((i) => i.type === "script").map((i) => i.id)
+    if (providers.length > 0) await cmdInstall(providers, force)
+    for (const name of scripts) await cmdRun(name, args)
   }
 } else {
   const scripts = await listScripts()
@@ -159,8 +172,9 @@ if (command === "list") {
     console.log(`toolbox
 
 Usage:
-  toolbox                  Install providers (interactive selection)
-  toolbox <script>        Run a script
+  toolbox                  Interactive: pick providers to install
+                           or scripts to run
+  toolbox <script>        Run a script directly (optional)
   toolbox list             List providers and scripts
 
 Options:

@@ -30,22 +30,25 @@ kuaipao/gpt-5.6-terra
 
 | Command               | Description                              |
 | --------------------- | ---------------------------------------- |
-| `oct`                 | Interactive provider selection           |
-| `oct <script>`        | Run a bundled script                     |
+| `oct`                 | Interactive: pick providers to install or scripts to run |
+| `oct <script>`        | Run a script directly (optional)         |
 | `oct list`            | List providers and scripts               |
 | `oct --force`         | Overwrite local edits                    |
 | `OPENCODE_CONFIG_DIR=/x oct` | Install into a custom config dir |
 
-Interactive install:
+Interactive selection mixes both kinds — providers are marked `[p]`, scripts
+`[s]`. Pick a number to install a provider or run a script; `a` does all:
 
 ```
 $ oct
-Built-in providers:
-  1) kuaipao
-  2) rawchat
-Select (numbers, e.g. 1,2 | a = all | q = quit): 1
+Available:
+  1) [p] kuaipao
+  2) [p] rawchat
+  3) [s] hello
+Select (numbers, e.g. 1,2 | a = all | q = quit): 1,3
 + C:\Users\you\.config\opencode\plugins\provider-registry.js
 + C:\Users\you\.config\opencode\providers\kuaipao.json
+hello from toolbox (configDir: C:\Users\you\.config\opencode)
 ```
 
 ## How it works
