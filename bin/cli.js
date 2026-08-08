@@ -3,10 +3,11 @@ import { copyFile, mkdir, readdir, stat } from "node:fs/promises"
 import { createInterface } from "node:readline"
 import path from "node:path"
 import os from "node:os"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 const PKG_ROOT = fileURLToPath(new URL("..", import.meta.url))
 const SRC_PROVIDERS = path.join(PKG_ROOT, "providers")
+const SRC_SCRIPTS = path.join(PKG_ROOT, "scripts")
 const SRC_PLUGIN = path.join(PKG_ROOT, "index.js")
 const PLUGIN_NAME = "provider-registry.js"
 
@@ -31,12 +32,22 @@ async function listProviders() {
     .sort()
 }
 
+async function listScripts() {
+  return (await readdir(SRC_SCRIPTS))
+    .filter((f) => f.endsWith(".mjs"))
+    .map((f) => f.slice(0, -4))
+    .sort()
+}
+
 async function cmdList() {
-  const files = await listProviders()
-  const ids = files.map((f) => f.slice(0, -5))
-  console.log(`Built-in providers (${ids.length}):`)
-  for (const id of ids) console.log(`  ${id}`)
-  console.log("\nRun: oct")
+  const providers = (await listProviders()).map((f) => f.slice(0, -5))
+  const scripts = await listScripts()
+  console.log(`Built-in providers (${providers.length}):`)
+  for (const id of providers) console.log(`  ${id}`)
+  console.log(`\nScripts (${scripts.length}):`)
+  for (const name of scripts) console.log(`  ${name}`)
+  console.log("\nRun: oct               interactive provider install")
+  console.log("      oct <script>     run a script")
 }
 
 function askChoice(choices) {
@@ -108,6 +119,24 @@ async function cmdInstall(ids, force) {
   )
 }
 
+async function cmdRun(name, args) {
+  const candidates = [
+    path.join(SRC_SCRIPTS, `${name}.mjs`),
+    path.join(SRC_SCRIPTS, `${name}.js`),
+  ]
+  const file = (await Promise.all(candidates.map(exists)))
+    .map((ok, i) => (ok ? candidates[i] : null))
+    .find(Boolean)
+  if (!file) {
+    console.error(`toolbox: unknown script "${name}"`)
+    process.exit(1)
+  }
+  const mod = await import(pathToFileURL(file).href)
+  if (typeof mod.default === "function") {
+    await mod.default(args, { configDir })
+  }
+}
+
 const [, , command, ...rest] = process.argv
 const force = rest.includes("--force")
 const args = rest.filter((a) => !a.startsWith("--"))
@@ -123,15 +152,21 @@ if (command === "list") {
     await cmdInstall(selected, force)
   }
 } else {
-  console.log(`toolbox
+  const scripts = await listScripts()
+  if (scripts.includes(command)) {
+    await cmdRun(command, args)
+  } else {
+    console.log(`toolbox
 
 Usage:
   toolbox                  Install providers (interactive selection)
-  toolbox list             List built-in providers
+  toolbox <script>        Run a script
+  toolbox list             List providers and scripts
 
 Options:
   --force    Overwrite existing files in ~/.config/opencode
 
 The provider-registry plugin is auto-installed on first use.
 `)
+  }
 }

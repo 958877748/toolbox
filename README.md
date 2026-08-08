@@ -31,7 +31,8 @@ kuaipao/gpt-5.6-terra
 | Command               | Description                              |
 | --------------------- | ---------------------------------------- |
 | `oct`                 | Interactive provider selection           |
-| `oct list`            | List built-in providers                  |
+| `oct <script>`        | Run a bundled script                     |
+| `oct list`            | List providers and scripts               |
 | `oct --force`         | Overwrite local edits                    |
 | `OPENCODE_CONFIG_DIR=/x oct` | Install into a custom config dir |
 
@@ -60,8 +61,8 @@ Select (numbers, e.g. 1,2 | a = all | q = quit): 1
 ## Adding a provider
 
 Add a JSON file to `providers/` in this package, then republish and re-run
-`oct install <id>` on each machine. For a machine-local one-off provider,
-just drop the file into `~/.config/opencode/providers/` yourself:
+`oct` on each machine. For a machine-local one-off provider, just drop the
+file into `~/.config/opencode/providers/` yourself:
 
 ```json
 {
@@ -82,18 +83,37 @@ just drop the file into `~/.config/opencode/providers/` yourself:
 }
 ```
 
+## Adding a script
+
+Scripts are plain `.mjs` modules in `scripts/` of this package. The filename
+is the command name. Run them on any machine with:
+
+```bash
+oct <script-name> [args...]
+```
+
+Convention: export a default async function; it receives the positional
+arguments and a context object:
+
+```js
+// scripts/hello.mjs
+export default async function hello(args, { configDir }) {
+  console.log(`hello from toolbox (configDir: ${configDir})`)
+}
+```
+
+Scripts can import anything from `node:` built-ins (or add dependencies to
+`package.json`). Republish and every machine gets the new script via
+`npx @guolei1994/tool <name>`.
+
 ## Publishing updates
 
 ```bash
 npm version patch
-npm publish
+npm stage publish
 ```
 
-Check that the package name is still available first:
-
-```bash
-npm view @guolei1994/tool
-```
+Then approve the staged version on the npm website (Staged Packages page).
 
 ## License
 
