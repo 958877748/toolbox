@@ -1,0 +1,31 @@
+{
+  "name": "@guolei1994/tool",
+  "version": "1.0.2",
+  "description": "A toolbox for opencode: declarative provider definitions and one-command installs on any machine",
+  "type": "module",
+  "main": "index.js",
+  "exports": "./index.js",
+  "bin": {
+    "tool": "bin/cli.js",
+    "toolbox": "bin/cli.js",
+    "oct": "bin/cli.js"
+  },
+  "files": [
+    "index.js",
+    "bin/",
+    "providers/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "opencode",
+    "provider",
+    "openai",
+    "toolbox",
+    "cli"
+  ],
+  "license": "MIT"
+}
