@@ -4,12 +4,29 @@ import os from "node:os"
 import path from "node:path"
 import readline from "node:readline"
 
-const DEFAULT_PROFILE = {
-  name: "rawchat",
-  base_url: "https://rawchat.cn/codex",
-  model: "gpt-5.6-sol",
-  reasoning_effort: "high",
+const BUILTIN_PROFILES = {
+  rawchat: {
+    base_url: "https://rawchat.cn/codex",
+    model: "gpt-5.6-terra",
+    reasoning_effort: "high",
+  },
+  "opencode-go": {
+    base_url: "https://opencode.ai/zen/go/v1",
+    model: "deepseek-v4-flash",
+    context_window: 307200,
+    compact_limit: 262144,
+    reasoning_effort: "max",
+  },
+  deepseek: {
+    base_url: "https://api.deepseek.com",
+    model: "deepseek-v4-flash",
+    context_window: 307200,
+    compact_limit: 262144,
+    reasoning_effort: "max",
+  },
 }
+
+const DEFAULT_PROFILE = { name: "custom", ...BUILTIN_PROFILES.rawchat }
 
 function codexDir() {
   return path.join(process.env.USERPROFILE || os.homedir(), ".codex")
@@ -76,7 +93,8 @@ function askSecret(question) {
 async function readProfiles() {
   const file = path.join(codexDir(), "endpoints.json")
   try {
-    const parsed = JSON.parse(await readFile(file, "utf8"))
+    const raw = (await readFile(file, "utf8")).replace(/^\uFEFF/, "")
+    const parsed = JSON.parse(raw)
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid format")
     return parsed
   } catch (error) {
@@ -246,23 +264,25 @@ function profileNames(profiles) {
   return Object.keys(profiles).sort((a, b) => a.localeCompare(b))
 }
 
-function printProfile(profile, marker = "") {
-  console.log(`${marker}${profile.name}: ${profile.base_url}`)
-  console.log(`   model: ${profile.model || "Codex default"}; effort: ${profile.reasoning_effort || "Codex default"}; key: ${maskKey(profile.api_key)}`)
+function allProfiles(savedProfiles) {
+  return { ...BUILTIN_PROFILES, ...savedProfiles }
 }
 
 async function chooseProfile(profiles, title) {
-  const names = profileNames(profiles)
-  if (names.length === 0) {
-    console.log("\nNo saved endpoints yet.")
-    return null
-  }
+  const endpoints = allProfiles(profiles)
+  const names = profileNames(endpoints)
   console.log(`\n${title}`)
-  names.forEach((name, index) => console.log(`  ${index + 1}) ${name}  ${profiles[name].base_url}`))
+  names.forEach((name, index) => {
+    const profile = endpoints[name]
+    const keyStatus = profile.api_key ? "key saved" : "API key required"
+    console.log(`  ${index + 1}) ${name}  ${profile.base_url}  (${keyStatus})`)
+  })
   console.log("  0) Back")
   const answer = await ask("Select: ")
   const number = Number.parseInt(answer, 10)
-  return number >= 1 && number <= names.length ? names[number - 1] : null
+  if (number < 1 || number > names.length) return null
+  const name = names[number - 1]
+  return { name, profile: { ...endpoints[name] } }
 }
 
 async function configureProfile(existing = null) {
@@ -315,7 +335,8 @@ async function configureProfile(existing = null) {
 }
 
 async function addOrEditProfile(profiles, existingName = null) {
-  const profile = await configureProfile(existingName ? { ...profiles[existingName], name: existingName } : null)
+  const endpoints = allProfiles(profiles)
+  const profile = await configureProfile(existingName ? { ...endpoints[existingName], name: existingName } : null)
   if (!profile) return
   if (existingName && profile.name !== existingName) delete profiles[existingName]
   profiles[profile.name] = { ...profile }
@@ -325,9 +346,20 @@ async function addOrEditProfile(profiles, existingName = null) {
 }
 
 async function switchEndpoint(profiles) {
-  const name = await chooseProfile(profiles, "Switch Codex endpoint")
-  if (!name) return
-  const profile = profiles[name]
+  const selected = await chooseProfile(profiles, "Choose a Codex endpoint")
+  if (!selected) return
+  const { name, profile } = selected
+  if (!profile.api_key) {
+    const key = await askSecret(`API key for ${name}: `)
+    if (!key) {
+      console.log("An API key is required to switch this endpoint.")
+      return
+    }
+    profile.api_key = key
+    profiles[name] = { ...profile }
+    await saveProfiles(profiles)
+    console.log("API key saved locally.")
+  }
   console.log("Testing endpoint...")
   const result = await testEndpoint(profile)
   console.log(result.message)
@@ -348,18 +380,24 @@ async function showCurrent(profiles) {
     return
   }
   const current = baseUrl.replace(/\/+$/, "")
-  const name = profileNames(profiles).find((item) => profiles[item].base_url.replace(/\/+$/, "") === current)
+  const endpoints = allProfiles(profiles)
+  const name = profileNames(endpoints).find((item) => endpoints[item].base_url.replace(/\/+$/, "") === current)
   console.log(`  ${name || "Custom endpoint"}: ${current}`)
 }
 
 async function removeProfile(profiles) {
-  const name = await chooseProfile(profiles, "Remove saved endpoint")
-  if (!name) return
+  const selected = await chooseProfile(profiles, "Forget a saved endpoint")
+  if (!selected) return
+  const { name } = selected
+  if (!profiles[name]) {
+    console.log("This is a built-in template with no saved API key.")
+    return
+  }
   const confirmation = await ask(`Remove ${name}? [y/N]: `)
   if (!/^y(es)?$/i.test(confirmation)) return
   delete profiles[name]
   await saveProfiles(profiles)
-  console.log("Endpoint removed from local saved profiles.")
+  console.log("Saved API key and local settings removed. The built-in template remains available.")
 }
 
 export default async function codex() {
@@ -383,14 +421,14 @@ export default async function codex() {
     if (choice === "1") await switchEndpoint(profiles)
     if (choice === "2") await addOrEditProfile(profiles)
     if (choice === "3") {
-      const name = await chooseProfile(profiles, "Edit saved endpoint")
-      if (name) await addOrEditProfile(profiles, name)
+      const selected = await chooseProfile(profiles, "Edit an endpoint")
+      if (selected) await addOrEditProfile(profiles, selected.name)
     }
     if (choice === "4") {
-      const name = await chooseProfile(profiles, "Test endpoint")
-      if (name) {
+      const selected = await chooseProfile(profiles, "Test endpoint")
+      if (selected) {
         console.log("Testing endpoint...")
-        console.log((await testEndpoint(profiles[name])).message)
+        console.log((await testEndpoint(selected.profile)).message)
       }
     }
     if (choice === "5") await showCurrent(profiles)

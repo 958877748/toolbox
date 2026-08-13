@@ -26,10 +26,10 @@ kuaipao/gpt-5.6-sol
 kuaipao/gpt-5.6-terra
 ```
 
-The same menu includes **Manage Codex endpoints**. It saves endpoint profiles
-and API keys only in the local `~/.codex/endpoints.json` file. The first setup
-starts with sensible endpoint defaults; enter an API key to save it, then later
-switch profiles with menu selections alone.
+The same menu includes **Manage Codex endpoints**, with built-in templates for
+RawChat, OpenCode Go, and DeepSeek. API keys are never included in the package:
+enter a key only when first selecting a template, and it is saved solely in the
+local `~/.codex/endpoints.json` file. Later switches use menu selections alone.
 
 ## Commands
 
