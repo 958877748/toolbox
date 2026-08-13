@@ -12,6 +12,8 @@ const BUILTIN_PROFILES = {
   rawchat: {
     base_url: "https://rawchat.cn/codex",
     model: "gpt-5.6-terra",
+    context_window: 270000,
+    compact_limit: 240000,
     reasoning_effort: "max",
   },
   "opencode-go": {
