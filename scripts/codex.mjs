@@ -20,12 +20,16 @@ const BUILTIN_PROFILES = {
     base_url: "https://opencode.ai/zen/go/v1",
     model: "deepseek-v4-flash",
     model_catalog_json: "models.json",
+    context_window: 270000,
+    compact_limit: 240000,
     reasoning_effort: "max",
   },
   deepseek: {
     base_url: "https://api.deepseek.com",
     model: "deepseek-v4-flash",
     model_catalog_json: "models.json",
+    context_window: 270000,
+    compact_limit: 240000,
     reasoning_effort: "max",
   },
 }
