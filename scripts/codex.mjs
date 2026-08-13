@@ -1,8 +1,12 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { execFile } from "node:child_process"
 import os from "node:os"
 import path from "node:path"
 import readline from "node:readline"
+import { fileURLToPath } from "node:url"
+
+const PKG_ROOT = fileURLToPath(new URL("..", import.meta.url))
+const BUILTIN_CATALOG = path.join(PKG_ROOT, "codex-catalogs", "models.json")
 
 const BUILTIN_PROFILES = {
   rawchat: {
@@ -13,15 +17,17 @@ const BUILTIN_PROFILES = {
   "opencode-go": {
     base_url: "https://opencode.ai/zen/go/v1",
     model: "deepseek-v4-flash",
-    context_window: 307200,
-    compact_limit: 262144,
+    model_catalog_json: "models.json",
+    context_window: 270000,
+    compact_limit: 240000,
     reasoning_effort: "max",
   },
   deepseek: {
     base_url: "https://api.deepseek.com",
     model: "deepseek-v4-flash",
-    context_window: 307200,
-    compact_limit: 262144,
+    model_catalog_json: "models.json",
+    context_window: 270000,
+    compact_limit: 240000,
     reasoning_effort: "max",
   },
 }
@@ -30,6 +36,15 @@ const DEFAULT_PROFILE = { name: "custom", ...BUILTIN_PROFILES.rawchat }
 
 function codexDir() {
   return path.join(process.env.USERPROFILE || os.homedir(), ".codex")
+}
+
+async function exists(file) {
+  try {
+    await stat(file)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function maskKey(value) {
@@ -236,8 +251,22 @@ async function applyProfile(profile) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-")
     await copyFile(configFile, `${configFile}.toolbox-backup-${stamp}`)
   }
+  profile.model_catalog_json = await ensureCatalog(profile)
   await writeFile(configFile, renderCodexConfig(original, profile), "utf8")
   await persistApiKey(profile.api_key)
+}
+
+async function ensureCatalog(profile) {
+  const configured = profile.model_catalog_json
+  if (!configured) return undefined
+  if (configured !== "models.json") return configured
+  const destination = path.join(codexDir(), "models.json")
+  if (!(await exists(destination))) {
+    await mkdir(codexDir(), { recursive: true })
+    await copyFile(BUILTIN_CATALOG, destination)
+    console.log(`+ ${destination} (bundled model catalog installed)`)
+  }
+  return destination.replace(/\\/g, "/")
 }
 
 export async function testEndpoint(profile) {

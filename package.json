@@ -13,6 +13,7 @@
   "files": [
     "index.js",
     "bin/",
+    "codex-catalogs/",
     "providers/",
     "scripts/",
     "README.md",
