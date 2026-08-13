@@ -18,16 +18,12 @@ const BUILTIN_PROFILES = {
     base_url: "https://opencode.ai/zen/go/v1",
     model: "deepseek-v4-flash",
     model_catalog_json: "models.json",
-    context_window: 270000,
-    compact_limit: 240000,
     reasoning_effort: "max",
   },
   deepseek: {
     base_url: "https://api.deepseek.com",
     model: "deepseek-v4-flash",
     model_catalog_json: "models.json",
-    context_window: 270000,
-    compact_limit: 240000,
     reasoning_effort: "max",
   },
 }
@@ -300,7 +296,7 @@ function stripStaleTemplateKeys(profile, name) {
   if (!builtin) return { ...profile }
   const result = { ...profile }
   for (const key of TEMPLATE_MANAGED_KEYS) {
-    if (result[key] === builtin[key]) delete result[key]
+    if (builtin[key] === undefined || result[key] === builtin[key]) delete result[key]
   }
   return result
 }
