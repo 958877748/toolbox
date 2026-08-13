@@ -28,12 +28,22 @@ kuaipao/gpt-5.6-terra
 
 The same menu includes **Manage Codex endpoints**, with built-in templates for
 RawChat, OpenCode Go, and DeepSeek. API keys are never included in the package:
-enter a key only when first selecting a template, and it is saved solely in the
-local `~/.codex/endpoints.json` file. Later switches use menu selections alone.
+enter a key only when first selecting an endpoint; keys are saved solely in the
+local `~/.codex/endpoints.json` and exported to per-endpoint environment
+variables when you switch (`RAWCHAT_API_KEY`, `CODEX_API_KEY`,
+`DEEPSEEK_API_KEY`; custom endpoints default to `CODEX_API_KEY`).
+
+Switching an endpoint installs **all** known endpoints into
+`~/.codex/config.toml` under `[model_providers.<id>]` and writes one profile
+file per endpoint: `~/.codex/<id>.config.toml`. Start Codex with:
+
+    codex --profile <id>
+
+Running plain `codex` keeps using the most recently switched endpoint.
 Endpoints that need custom model metadata (OpenCode Go, DeepSeek) also get the
 packaged catalog `codex-catalogs/models.json` installed to `~/.codex/models.json`
-and a `model_catalog_json` entry written into `~/.codex/config.toml`, so Codex
-uses the correct model metadata instead of fallback defaults.
+and a `model_catalog_json` entry written into the profile, so Codex uses the
+correct model metadata instead of fallback defaults.
 
 ## Commands
 
