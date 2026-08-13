@@ -293,8 +293,25 @@ function profileNames(profiles) {
   return Object.keys(profiles).sort((a, b) => a.localeCompare(b))
 }
 
+const TEMPLATE_MANAGED_KEYS = ["context_window", "compact_limit", "model_catalog_json"]
+
+function stripStaleTemplateKeys(profile, name) {
+  const builtin = BUILTIN_PROFILES[name]
+  if (!builtin) return { ...profile }
+  const result = { ...profile }
+  for (const key of TEMPLATE_MANAGED_KEYS) {
+    if (result[key] === builtin[key]) delete result[key]
+  }
+  return result
+}
+
 function allProfiles(savedProfiles) {
-  return { ...BUILTIN_PROFILES, ...savedProfiles }
+  const merged = {}
+  const names = new Set([...Object.keys(BUILTIN_PROFILES), ...Object.keys(savedProfiles)])
+  for (const name of names) {
+    merged[name] = { ...BUILTIN_PROFILES[name], ...savedProfiles[name] }
+  }
+  return merged
 }
 
 async function chooseProfile(profiles, title) {
@@ -368,7 +385,7 @@ async function addOrEditProfile(profiles, existingName = null) {
   const profile = await configureProfile(existingName ? { ...endpoints[existingName], name: existingName } : null)
   if (!profile) return
   if (existingName && profile.name !== existingName) delete profiles[existingName]
-  profiles[profile.name] = { ...profile }
+  profiles[profile.name] = stripStaleTemplateKeys(profile, existingName || profile.name)
   delete profiles[profile.name].name
   await saveProfiles(profiles)
   console.log("Endpoint saved locally.")
@@ -385,7 +402,7 @@ async function switchEndpoint(profiles) {
       return
     }
     profile.api_key = key
-    profiles[name] = { ...profile }
+    profiles[name] = stripStaleTemplateKeys(profile, name)
     await saveProfiles(profiles)
     console.log("API key saved locally.")
   }
