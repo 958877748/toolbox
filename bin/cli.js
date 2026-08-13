@@ -58,13 +58,20 @@ async function allItems() {
   ]
 }
 
+function itemLabel(item) {
+  if (item.type === "script" && item.id === "codex") {
+    return "Manage Codex endpoints"
+  }
+  return item.id
+}
+
 function askChoice(items) {
   return new Promise((resolve) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout })
     console.log("Available:")
     for (let i = 0; i < items.length; i++) {
       const tag = items[i].type === "provider" ? "p" : "s"
-      console.log(`  ${i + 1}) [${tag}] ${items[i].id}`)
+      console.log(`  ${i + 1}) [${tag}] ${itemLabel(items[i])}`)
     }
     rl.question(
       "Select (numbers, e.g. 1,2 | a = all | q = quit): ",

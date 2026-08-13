@@ -26,6 +26,11 @@ kuaipao/gpt-5.6-sol
 kuaipao/gpt-5.6-terra
 ```
 
+The same menu includes **Manage Codex endpoints**. It saves endpoint profiles
+and API keys only in the local `~/.codex/endpoints.json` file. The first setup
+starts with sensible endpoint defaults; enter an API key to save it, then later
+switch profiles with menu selections alone.
+
 ## Commands
 
 | Command               | Description                              |
