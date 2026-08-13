@@ -8,7 +8,7 @@ const BUILTIN_PROFILES = {
   rawchat: {
     base_url: "https://rawchat.cn/codex",
     model: "gpt-5.6-terra",
-    reasoning_effort: "high",
+    reasoning_effort: "max",
   },
   "opencode-go": {
     base_url: "https://opencode.ai/zen/go/v1",
@@ -240,17 +240,17 @@ async function applyProfile(profile) {
   await persistApiKey(profile.api_key)
 }
 
-async function testEndpoint(profile) {
+export async function testEndpoint(profile) {
   const baseUrl = profile.base_url.replace(/\/+$/, "")
   const headers = { Authorization: `Bearer ${profile.api_key}` }
-  for (const suffix of ["/health", "/models"]) {
+  for (const suffix of ["/models", "/health"]) {
     try {
       const response = await fetch(`${baseUrl}${suffix}`, {
         headers,
         signal: AbortSignal.timeout(10_000),
       })
       if (response.status === 401 || response.status === 403) {
-        return { ok: false, message: `Authentication failed (HTTP ${response.status}).` }
+        return { ok: false, message: `Authentication failed at ${suffix} (HTTP ${response.status}).` }
       }
       return { ok: true, message: `Endpoint reached at ${suffix} (HTTP ${response.status}).` }
     } catch {
@@ -330,7 +330,7 @@ async function configureProfile(existing = null) {
       if (key) profile.api_key = key
     }
     if (field === "4") profile.model = await askDefault("Model", profile.model || "gpt-5.6-sol")
-    if (field === "5") profile.reasoning_effort = await askDefault("Reasoning effort", profile.reasoning_effort || "high")
+    if (field === "5") profile.reasoning_effort = await askDefault("Reasoning effort", profile.reasoning_effort || "max")
   }
 }
 
