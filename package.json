@@ -1,6 +1,6 @@
 {
   "name": "@guolei1994/tool",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "A toolbox for opencode: declarative provider definitions and one-command installs on any machine",
   "type": "module",
   "main": "index.js",
