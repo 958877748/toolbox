@@ -28,10 +28,23 @@ kuaipao/gpt-5.6-terra
 
 The same menu includes **Manage Codex endpoints**, with built-in templates for
 RawChat, OpenCode Go, and DeepSeek. API keys are never included in the package:
-enter a key only when first selecting an endpoint; keys are saved solely in the
-local `~/.codex/endpoints.json` and exported to per-endpoint environment
-variables when you switch (`RAWCHAT_API_KEY`, `CODEX_API_KEY`,
-`DEEPSEEK_API_KEY`; custom endpoints default to `CODEX_API_KEY`).
+enter a key only when first selecting an endpoint. Keys are saved in local
+`~/.codex/endpoints.json` and written into each endpoint's
+`[model_providers.<id>]` section in `~/.codex/config.toml` as
+`experimental_bearer_token`. Endpoint sections are only ever added or updated,
+never deleted, so any number of endpoints can coexist in one config. Endpoints
+without a saved key fall back to their environment variable
+(`RAWCHAT_API_KEY`, `CODEX_API_KEY`, `DEEPSEEK_API_KEY`; custom endpoints
+default to `CODEX_API_KEY`). The config is parsed with `smol-toml`, modified
+as a TOML object, and serialized back; existing keys and sections are
+preserved, but comments and manual formatting in `config.toml` are not kept
+across a switch. Switching an endpoint only updates the root
+`model_provider` / `model` / `model_catalog_json` values (`model_catalog_json`
+is written as a relative per-endpoint file such as `deepseek.json`, resolved
+by Codex against `~/.codex`). GPT models (`gpt-*`) do not need a model
+catalog, so the `model_catalog_json` line is only written for non-GPT models
+like `deepseek-v4-flash`; switching to a GPT endpoint removes a stale catalog
+line from the root config.
 
 Switching an endpoint installs **all** known endpoints into
 `~/.codex/config.toml` under `[model_providers.<id>]` and writes one profile
@@ -41,8 +54,9 @@ file per endpoint: `~/.codex/<id>.config.toml`. Start Codex with:
 
 Running plain `codex` keeps using the most recently switched endpoint.
 Endpoints that need custom model metadata (OpenCode Go, DeepSeek) also get the
-packaged catalog `codex-catalogs/models.json` installed to `~/.codex/models.json`
-and a `model_catalog_json` entry written into the profile, so Codex uses the
+packaged catalog installed to a per-endpoint file such as
+`~/.codex/opencode-go.json` or `~/.codex/deepseek.json`, with a matching
+`model_catalog_json` entry written into the profile, so Codex uses the
 correct model metadata instead of fallback defaults.
 
 ## Commands

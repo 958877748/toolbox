@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { copyFile, mkdir, readdir, stat } from "node:fs/promises"
-import { createInterface } from "node:readline"
 import path from "node:path"
 import os from "node:os"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { ask } from "../scripts/lib/ask.mjs"
 
 const PKG_ROOT = fileURLToPath(new URL("..", import.meta.url))
 const SRC_PROVIDERS = path.join(PKG_ROOT, "providers")
@@ -67,19 +67,12 @@ function itemLabel(item) {
 
 function askChoice(items) {
   return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout })
     console.log("Available:")
     for (let i = 0; i < items.length; i++) {
       const tag = items[i].type === "provider" ? "p" : "s"
       console.log(`  ${i + 1}) [${tag}] ${itemLabel(items[i])}`)
     }
-    rl.question(
-      "Select (numbers, e.g. 1,2 | a = all | q = quit): ",
-      (answer) => {
-        rl.close()
-        resolve(answer.trim())
-      },
-    )
+    ask("Select (numbers, e.g. 1,2 | a = all | q = quit): ").then(resolve)
   })
 }
 

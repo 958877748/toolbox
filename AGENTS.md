@@ -9,9 +9,11 @@ command (`npx @guolei1994/tool`). GitHub: https://github.com/958877748/toolbox
 - `providers/<id>.json` — opencode provider definitions; filename = provider ID
 - `scripts/<name>.mjs` — runnable scripts; filename = command name
 - `scripts/codex.mjs` — Codex endpoint manager: keeps every endpoint in
-  `~/.codex/config.toml`'s `[model_providers.*]`, writes one
-  `~/.codex/<id>.config.toml` profile per endpoint, switches with
-  `codex --profile <id>`
+  `~/.codex/config.toml`'s `[model_providers.*]` (add/update only, never
+  removes sections or keys), writes one `~/.codex/<id>.config.toml` profile
+  per endpoint, switches with `codex --profile <id>`; internals live in
+  `scripts/codex/` (profiles, TOML parse/render via `smol-toml`, config sync,
+  UI)
 - `bin/cli.js` — CLI: interactive menu mixing both kinds, `list`, direct run
 - `index.js` — the opencode plugin registry (copied to `~/.config/opencode/plugins/`)
 
