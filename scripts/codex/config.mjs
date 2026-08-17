@@ -55,5 +55,5 @@ export async function applyProfile(savedProfiles, selected) {
   console.log(`Switched to ${selectedWithId.name} (provider: ${selectedWithId.id}).`)
   console.log(`Run Codex with: codex --profile ${selectedWithId.id}`)
   console.log("Plain `codex` also uses this endpoint until you switch again.")
-  console.log("The saved API key is written into config.toml for this endpoint.")
+  console.log("Reads its key from environment; no API key in config.toml.")
 }

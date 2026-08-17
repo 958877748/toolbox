@@ -2,7 +2,7 @@ import { readdir } from "node:fs/promises"
 import readline from "node:readline"
 import { ask } from "../lib/ask.mjs"
 import { applyProfile } from "./config.mjs"
-import { codexDir, exists, profileFile, readConfig } from "./env.mjs"
+import { codexDir, exists, profileFile, readConfig, setEnvVar } from "./env.mjs"
 import {
   BUILTIN_PROFILES,
   DEFAULT_ENV_KEY,
@@ -15,7 +15,7 @@ import {
   slugify,
   stripStaleTemplateKeys,
 } from "./profiles.mjs"
-import { getActiveProviderId, getCodexBaseUrl, readModelProviders } from "./toml.mjs"
+import { getActiveProviderId, getCodexBaseUrl, envKeyFor, readModelProviders } from "./toml.mjs"
 export { ask } from "../lib/ask.mjs"
 
 function maskKey(value) {
@@ -191,17 +191,18 @@ export async function switchEndpoint(profiles) {
   const selected = await chooseProfile(await switchEndpoints(profiles), "Choose a Codex endpoint")
   if (!selected) return
   const { name, profile } = selected
-  if (!profile.api_key) {
-    const key = await askSecret(`API key for ${name}: `)
-    if (!key) {
-      console.log("An API key is required to switch this endpoint.")
-      return
-    }
-    profile.api_key = key
+
+  // If we have a stored/typed key, persist it as the endpoint's env var and
+  // drop it from the profile so config.toml never carries the token.
+  if (profile.api_key) {
+    const envKey = envKeyFor(profile)
+    await setEnvVar(envKey, profile.api_key)
+    console.log(`Key saved to environment variable ${envKey}.`)
+    delete profile.api_key
     profiles[name] = stripStaleTemplateKeys(profile, name)
     await saveProfiles(profiles)
-    console.log("API key saved locally.")
   }
+
   await applyProfile(profiles, selected)
 }
 
@@ -255,7 +256,14 @@ export async function removeProfile(profiles) {
   }
   const confirmation = await ask(`Forget the saved API key for ${name}? [y/N]: `)
   if (!/^y(es)?$/i.test(confirmation)) return
+  const envKey = envKeyFor({ id: name, ...profiles[name] })
   delete profiles[name].api_key
   await saveProfiles(profiles)
-  console.log(`Saved API key forgotten. The ${name} endpoint stays in ~/.codex/config.toml.`)
+  console.log(`Saved API key forgotten from endpoints.json.`)
+  console.log(`The environment variable ${envKey} may still hold the key — remove it with:`)
+  console.log(
+    process.platform === "win32"
+      ? `  reg delete HKCU\\Environment /v ${envKey} /f`
+      : `  unset ${envKey}  (and remove the export line from ~/.profile)`,
+  )
 }

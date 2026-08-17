@@ -1,5 +1,21 @@
 import { parse, stringify } from "smol-toml"
-import { DEFAULT_ENV_KEY, isGptModel, validEnvKey } from "./profiles.mjs"
+import { isGptModel } from "./profiles.mjs"
+
+// Every endpoint reads its key from its own `<NAME>_API_KEY` environment
+// variable, derived from the endpoint id, so switching is isolated and no two
+// endpoints ever share a variable unknowingly. No API keys touch config.toml.
+export function envKeyFor(endpoint) {
+  // Always derived from the endpoint id so every endpoint owns its own
+  // <NAME>_API_KEY variable and nothing is ever shared with another endpoint.
+  return `${slugKey(endpoint.id || endpoint.name)}_API_KEY`
+}
+
+function slugKey(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toUpperCase()
+}
 
 export function parseConfig(source) {
   if (!source || !source.trim()) return {}
@@ -28,11 +44,8 @@ export function renderBaseConfig(source, endpoints, selectedId) {
     section.name = endpoint.name
     section.base_url = (endpoint.base_url || "").replace(/\/+$/, "")
     section.wire_api = "responses"
-    if (endpoint.api_key) {
-      section.experimental_bearer_token = endpoint.api_key
-    } else {
-      section.env_key = validEnvKey(endpoint.env_key) || DEFAULT_ENV_KEY
-    }
+    section.env_key = envKeyFor(endpoint)
+    delete section.experimental_bearer_token
   }
 
   return stringify(config)
