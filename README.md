@@ -21,10 +21,17 @@ Then restart opencode. The provider appears in the model picker:
 
 ```bash
 opencode models kuaipao
-kuaipao/gpt-5.6-luna
+kuaipao/gpt-5.4
+kuaipao/gpt-5.4-mini
+kuaipao/gpt-5.5
 kuaipao/gpt-5.6-sol
 kuaipao/gpt-5.6-terra
 ```
+
+> Note: models are only listed if the provider currently serves them. Kuaipao
+> removed `gpt-5.6-luna`; any stale picker entry for it fails with HTTP 503
+> `model_not_found`. If you see a dead model, update the provider file or use
+> the `pi` script (`toolbox pi fix`) which syncs live model lists.
 
 The same menu includes **Manage Codex endpoints**, with built-in templates for
 RawChat, OpenCode Go, and DeepSeek. API keys are never included in the package:
@@ -68,6 +75,7 @@ correct model metadata instead of fallback defaults.
 | `oct list`            | List providers and scripts               |
 | `oct --force`         | Overwrite local edits                    |
 | `OPENCODE_CONFIG_DIR=/x oct` | Install into a custom config dir |
+| `oct pi ...`          | Manage the pi coding agent's default provider/model pair |
 
 Interactive selection mixes both kinds — providers are marked `[p]`, scripts
 `[s]`. Pick a number to install a provider or run a script; `a` does all:
@@ -82,6 +90,24 @@ Select (numbers, e.g. 1,2 | a = all | q = quit): 1,3
 + C:\Users\you\.config\opencode\plugins\provider-registry.js
 + C:\Users\you\.config\opencode\providers\kuaipao.json
 hello from toolbox (configDir: C:\Users\you\.config\opencode)
+```
+
+### pi script
+
+pi stores the default model as two separate settings (`defaultProvider` +
+`defaultModel`). Switching only one leaves a dead pair — e.g. provider=kuaipao
+with model=deepseek-v4-flash gets rejected with HTTP 503 `model_not_found`, and
+pi silently falls back to the old model. `oct pi switch` always writes both
+fields together and validates the model against the provider's **live** model
+list first:
+
+```
+$ oct pi list                       # current default + live model sources
+$ oct pi models kuaipao             # live API model list for a provider
+$ oct pi switch kuaipao gpt-5.6-terra   # set provider+model atomically
+$ oct pi switch kuaipao gpt-5.6-luna    # REJECTED: luna is no longer served
+$ oct pi fix --apply                # migrate a dead default to a live model
+$ oct pi install-ext                # install missing pi provider extensions
 ```
 
 ## How it works

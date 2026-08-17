@@ -14,8 +14,18 @@ command (`npx @guolei1994/tool`). GitHub: https://github.com/958877748/toolbox
   per endpoint, switches with `codex --profile <id>`; internals live in
   `scripts/codex/` (profiles, TOML parse/render via `smol-toml`, config sync,
   UI)
+- `scripts/pi.mjs` — pi agent model manager: switches `~/.pi/agent/settings.json`
+  `defaultProvider` + `defaultModel` (+ thinking) atomically, validates the model
+  against the provider's live model list (kuaipao/rawchat hit their APIs,
+  opencode-go/deepseek read pi's cached models-store), and auto-migrates dead
+  pairs (e.g. kuaipao removed `gpt-5.6-luna`; requests now 503 `model_not_found`)
 - `bin/cli.js` — CLI: interactive menu mixing both kinds, `list`, direct run
 - `index.js` — the opencode plugin registry (copied to `~/.config/opencode/plugins/`)
+
+pi extensions the user installs live in `~/.pi/agent/extensions/`: they register
+providers with `pi.registerProvider()` using a live `/models` fetch, so their
+model lists are never stale at runtime (unlike static provider files like
+`providers/kuaipao.json`, which must be updated when an upstream removes a model).
 
 ## Adding a script
 
