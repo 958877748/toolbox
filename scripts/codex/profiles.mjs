@@ -68,10 +68,15 @@ export function profileNames(profiles) {
 
 const TEMPLATE_MANAGED_KEYS = ["context_window", "model_catalog_json", "env_key"]
 
+// Fields derived from the endpoint name/id or fixed by the templates that must
+// not be persisted into endpoints.json (they are recomputed on every read).
+const DERIVED_KEYS = ["id", "name", "wire_api"]
+
 export function stripStaleTemplateKeys(profile, name) {
-  const builtin = BUILTIN_PROFILES[name]
-  if (!builtin) return { ...profile }
   const result = { ...profile }
+  for (const key of DERIVED_KEYS) delete result[key]
+  const builtin = BUILTIN_PROFILES[name]
+  if (!builtin) return result
   for (const key of TEMPLATE_MANAGED_KEYS) {
     if (builtin[key] === undefined || result[key] === builtin[key]) delete result[key]
   }

@@ -192,16 +192,23 @@ export async function switchEndpoint(profiles) {
   if (!selected) return
   const { name, profile } = selected
 
-  // If we have a stored/typed key, persist it as the endpoint's env var and
-  // drop it from the profile so config.toml never carries the token.
-  if (profile.api_key) {
-    const envKey = envKeyFor(profile)
-    await setEnvVar(envKey, profile.api_key)
-    console.log(`Key saved to environment variable ${envKey}.`)
-    delete profile.api_key
-    profiles[name] = stripStaleTemplateKeys(profile, name)
-    await saveProfiles(profiles)
+  // Make sure an API key exists (interactive prompt only if not already saved),
+  // then persist it as the endpoint's env var. Codex reads the env var;
+  // config.toml never carries the token. The key also stays in endpoints.json
+  // so the list keeps showing "key saved" and you never set env vars yourself.
+  if (!profile.api_key) {
+    const key = await askSecret(`API key for ${name}: `)
+    if (!key) {
+      console.log("An API key is required to switch to this endpoint.")
+      return
+    }
+    profile.api_key = key
   }
+  const envKey = envKeyFor(profile)
+  await setEnvVar(envKey, profile.api_key)
+  console.log(`Key saved to environment variable ${envKey}.`)
+  profiles[name] = stripStaleTemplateKeys(profile, name)
+  await saveProfiles(profiles)
 
   await applyProfile(profiles, selected)
 }
